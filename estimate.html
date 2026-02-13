@@ -20,33 +20,41 @@
 <body>
   <div id="viewDiv"></div>
 
-  <script>
-    require([
-      "esri/Map",
-      "esri/views/MapView",
-      "esri/widgets/Search"
-    ], function(Map, MapView, Search) {
+  
+   <script>
+require([
+  "esri/Map",
+  "esri/views/MapView",
+  "esri/widgets/Search",
+  "esri/layers/FeatureLayer"
+], function(Map, MapView, Search, FeatureLayer) {
 
-      const map = new Map({
-        basemap: "satellite"
-      });
+  const layer = new FeatureLayer({
+    url: "https://services2.arcgis.com/FiaPA4ga0iQKduv3/arcgis/rest/services/USA_Structures_View/FeatureServer/0"
+  });
 
-      const view = new MapView({
-        container: "viewDiv",
-        map: map,
-        center: [-95.3698, 29.7604], // Houston
-        zoom: 12
-      });
+  const map = new Map({
+    basemap: "satellite",
+    layers: [layer]
+  });
 
-      const searchWidget = new Search({
-        view: view
-      });
+  const view = new MapView({
+    container: "viewDiv",
+    map: map,
+    center: [-95.3698, 29.7604], // Houston
+    zoom: 12
+  });
 
-      view.ui.add(searchWidget, {
-        position: "top-right"
-      });
+  const searchWidget = new Search({
+    view: view
+  });
 
-    });
-  </script>
+  view.ui.add(searchWidget, "top-right");
+
+});
+</script>
+
+  
 </body>
 </html>
+
