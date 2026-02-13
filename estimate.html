@@ -1,202 +1,52 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Instant Estimate | VALDEZTECH</title>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>ArcGIS Map with Search</title>
 
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-    />
+  <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
+  <script src="https://js.arcgis.com/4.29/"></script>
 
-    <!-- ArcGIS CSS -->
-    <link
-      rel="stylesheet"
-      href="https://js.arcgis.com/4.29/esri/themes/light/main.css"
-    />
-    <script src="https://js.arcgis.com/4.29/"></script>
+  <style>
+    html, body, #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+</head>
 
-    <style>
-      body {
-        background: #f4f6f7;
-        padding-top: 80px;
-      }
-      #viewDiv {
-        height: 500px;
-        border-radius: 8px;
-      }
-      .result-card {
-        display: none;
-      }
-    </style>
-  </head>
+<body>
+  <div id="viewDiv"></div>
 
-  <body>
-    <header>
-      <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
-        <div class="container">
-          <a class="navbar-brand fw-bold" href="./index.html">VALDEZTECH</a>
-          <button
-            class="navbar-toggler"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#navbarCollapse"
-          >
-            <span class="navbar-toggler-icon"></span>
-          </button>
-          <div class="collapse navbar-collapse" id="navbarCollapse">
-            <ul class="navbar-nav ms-auto">
-              <li class="nav-item">
-                <a class="nav-link" href="./services.html">Services</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="./areas.html">Areas We Serve</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link active" href="./estimate.html">Estimate</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="./pricing.html">Pricing</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="./about.html">About</a>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </nav>
-    </header>
+  <script>
+    require([
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/widgets/Search"
+    ], function(Map, MapView, Search) {
 
-    <div class="container py-5">
-      <h1 class="mb-4">Instant Service Estimate</h1>
-      <p class="text-muted">
-        Search your property and we will automatically detect the main
-        structure.
-      </p>
-
-      <div id="viewDiv" class="mb-4 shadow-sm"></div>
-
-      <div id="resultCard" class="card p-4 shadow-sm result-card">
-        <h4>Estimate Summary</h4>
-        <p>
-          <strong>Total Structure Area:</strong> <span id="totalArea"></span> sq
-          ft
-        </p>
-        <p>
-          <strong>Estimated Price:</strong> $<span id="priceEstimate"></span>
-        </p>
-        <p class="small text-muted">
-          Minimum service charge: $200. Final pricing confirmed after on-site
-          review.
-        </p>
-
-        <a
-          id="bookBtn"
-          href="./booking.html"
-          class="btn btn-success btn-lg mt-3"
-        >
-          Book This Service
-        </a>
-      </div>
-    </div>
-
-    <script>
-      require([
-        "esri/config",
-        "esri/Map",
-        "esri/views/MapView",
-        "esri/widgets/Search",
-        "esri/layers/FeatureLayer",
-        "esri/layers/GraphicsLayer",
-        "esri/geometry/geometryEngine",
-      ], function (
-        esriConfig,
-        Map,
-        MapView,
-        Search,
-        FeatureLayer,
-        GraphicsLayer,
-        geometryEngine,
-      ) {
-        // 🔐 INSERT YOUR ESRI API KEY HERE
-        esriConfig.apiKey =
-          "AAPTxy8BH1VEsoebNVZXo8HurFuXJAWEizam-TDK-rleihBNaRrqJGooy8BocHH46hiZRmtGIqIiNTTHuo9GXdioVr9AGA6MkbZ2A4C-QRJoLN36Dpsnyh8IRqaPxmgXNBD7WlSZFCKaIdsExr_mMeZv6H5yjwcu0-mpKRAbpxRoXL8AHdkklgapgqD4uLZQrcO92BQM7RydAoxQc9sWWyMxoWOJXXivMxf4ZL7J9ALcbCQ.AT1_VzFgSyvZ";
-
-        const graphicsLayer = new GraphicsLayer();
-
-        const map = new Map({
-          basemap: "satellite",
-          layers: [graphicsLayer],
-        });
-
-        const view = new MapView({
-          container: "viewDiv",
-          map: map,
-          center: [-95.461, 29.805], // Spring Branch default
-          zoom: 17,
-        });
-
-        // USA Structures Layer
-        const structuresLayer = new FeatureLayer({
-          url: "https://services2.arcgis.com/FiaPA4ga0iQKduv3/arcgis/rest/services/USA_Structures_View/FeatureServer/0",
-          outFields: ["*"],
-        });
-
-        map.add(structuresLayer);
-
-        // Search Widget
-        const search = new Search({
-          view: view,
-        });
-
-        view.ui.add(search, "top-right");
-
-        // Auto detect structure after search
-        search.on("select-result", function (event) {
-          const point = event.result.feature.geometry;
-
-          const query = structuresLayer.createQuery();
-          query.geometry = point;
-          query.spatialRelationship = "intersects";
-          query.returnGeometry = true;
-
-          structuresLayer.queryFeatures(query).then(function (results) {
-            graphicsLayer.removeAll();
-
-            if (results.features.length > 0) {
-              const building = results.features[0];
-              graphicsLayer.add(building);
-
-              const areaSqMeters = geometryEngine.geodesicArea(
-                building.geometry,
-                "square-meters",
-              );
-              const areaSqFt = areaSqMeters * 10.7639;
-
-              let rate = 0.28; // Adjust pricing rate here
-              let price = areaSqFt * rate;
-
-              if (price < 200) price = 200;
-
-              document.getElementById("totalArea").innerText =
-                areaSqFt.toFixed(0);
-              document.getElementById("priceEstimate").innerText =
-                price.toFixed(2);
-
-              document.getElementById("bookBtn").href =
-                `./booking.html?area=${areaSqFt.toFixed(0)}&price=${price.toFixed(2)}`;
-
-              document.getElementById("resultCard").style.display = "block";
-            } else {
-              alert("No structure detected at this location.");
-            }
-          });
-        });
+      const map = new Map({
+        basemap: "satellite"
       });
-    </script>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  </body>
+      const view = new MapView({
+        container: "viewDiv",
+        map: map,
+        center: [-95.3698, 29.7604], // Houston
+        zoom: 12
+      });
+
+      const searchWidget = new Search({
+        view: view
+      });
+
+      view.ui.add(searchWidget, {
+        position: "top-right"
+      });
+
+    });
+  </script>
+</body>
 </html>
-
