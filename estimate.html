@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>ArcGIS Map with Search</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Valdez-Tech Property Estimate</title>
 
+  <!-- ArcGIS CSS -->
   <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
   <script src="https://js.arcgis.com/4.29/"></script>
 
@@ -13,48 +15,150 @@
       margin: 0;
       height: 100%;
       width: 100%;
+      font-family: Arial, sans-serif;
+    }
+
+    .header {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 99;
+      background: white;
+      padding: 10px 15px;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      font-weight: bold;
     }
   </style>
 </head>
 
 <body>
-  <div id="viewDiv"></div>
 
-  
-   <script>
+<div class="header">
+  Valdez-Tech Property Estimate
+</div>
+
+<div id="viewDiv"></div>
+
+<script>
 require([
   "esri/Map",
   "esri/views/MapView",
   "esri/widgets/Search",
-  "esri/layers/FeatureLayer"
-], function(Map, MapView, Search, FeatureLayer) {
+  "esri/layers/FeatureLayer",
+  "esri/geometry/geometryEngine"
+], function(Map, MapView, Search, FeatureLayer, geometryEngine) {
 
-  const layer = new FeatureLayer({
-    url: "https://services2.arcgis.com/FiaPA4ga0iQKduv3/arcgis/rest/services/USA_Structures_View/FeatureServer/0"
+  // Harris County Parcels
+  const parcels = new FeatureLayer({
+    url: "https://www.gis.hctx.net/arcgis/rest/services/HCAD/Parcels/MapServer/0",
+    outFields: ["*"]
+  });
+
+  // USA Structures
+  const structures = new FeatureLayer({
+    url: "https://services2.arcgis.com/FiaPA4ga0iQKduv3/arcgis/rest/services/USA_Structures_View/FeatureServer/0",
+    outFields: ["*"]
   });
 
   const map = new Map({
     basemap: "satellite",
-    layers: [layer]
+    layers: [parcels, structures]
   });
 
   const view = new MapView({
     container: "viewDiv",
     map: map,
-    center: [-95.3698, 29.7604], // Houston
+    center: [-95.3698, 29.7604],
     zoom: 12
   });
 
+  // Search Widget
   const searchWidget = new Search({
     view: view
   });
 
   view.ui.add(searchWidget, "top-right");
 
+  searchWidget.on("select-result", function(event) {
+
+    const point = event.result.feature.geometry;
+
+    // Query parcel at search location
+    parcels.queryFeatures({
+      geometry: point,
+      spatialRelationship: "intersects",
+      returnGeometry: true,
+      outFields: ["*"]
+    }).then(function(parcelResults) {
+
+      if (parcelResults.features.length === 0) {
+        alert("No parcel found at this location.");
+        return;
+      }
+
+      const parcel = parcelResults.features[0];
+
+      view.graphics.removeAll();
+
+      parcel.symbol = {
+        type: "simple-fill",
+        color: [255, 255, 0, 0.2],
+        outline: {
+          color: "yellow",
+          width: 2
+        }
+      };
+
+      view.graphics.add(parcel);
+
+      // Parcel Area
+      const parcelAreaSqMeters = geometryEngine.planarArea(parcel.geometry, "square-meters");
+      const parcelAreaAcres = parcelAreaSqMeters * 0.000247105;
+
+      // Query structures inside parcel
+      structures.queryFeatures({
+        geometry: parcel.geometry,
+        spatialRelationship: "intersects",
+        returnGeometry: true,
+        outFields: ["*"]
+      }).then(function(structResults) {
+
+        let totalBuildingSqFt = 0;
+
+        structResults.features.forEach(function(feature) {
+          const areaSqMeters = geometryEngine.planarArea(feature.geometry, "square-meters");
+          const areaSqFt = areaSqMeters * 10.7639;
+          totalBuildingSqFt += areaSqFt;
+        });
+
+        // Pricing model
+        const pricePerSqFt = 0.25;
+        const estimatedPrice = totalBuildingSqFt * pricePerSqFt;
+
+        const owner = parcel.attributes["OWNERNAME"] || "N/A";
+        const address = parcel.attributes["SITEADDR"] || "N/A";
+
+        view.popup.open({
+          title: "Valdez-Tech Estimate",
+          location: parcel.geometry.centroid,
+          content: `
+            <b>Address:</b> ${address}<br>
+            <b>Owner:</b> ${owner}<br>
+            <b>Parcel Size:</b> ${parcelAreaAcres.toFixed(2)} acres<br>
+            <b>Total Building Area:</b> ${totalBuildingSqFt.toFixed(0)} sq ft<br>
+            <b>Estimated Price:</b> $${estimatedPrice.toFixed(2)}
+          `
+        });
+
+      });
+
+    });
+
+  });
+
 });
 </script>
 
-  
 </body>
 </html>
-
