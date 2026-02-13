@@ -95,4 +95,23 @@
     <label>Select Preferred Date:</label>
     <input type="date" name="Preferred Date" required>
 
-    <textarea name="Additional Notes" placeholder="Any special instructions?" rows="3">
+    <textarea name="Additional Notes" placeholder="Any special instructions?" rows="3"></textarea>
+
+    <button type="submit">Confirm Booking</button>
+
+  </form>
+</div>
+
+<script>
+  const address = localStorage.getItem("estimateAddress") || "Not Provided";
+  const price = localStorage.getItem("estimatePrice") || "0.00";
+
+  document.getElementById("summaryAddress").innerText = address;
+  document.getElementById("summaryPrice").innerText = price;
+
+  document.getElementById("formAddress").value = address;
+  document.getElementById("formPrice").value = "$" + price;
+</script>
+
+</body>
+</html>
